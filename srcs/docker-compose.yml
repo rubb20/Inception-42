@@ -1,0 +1,13 @@
+services:
+  mariadb:
+    build:
+      context: ./requirements/mariadb
+      dockerfile: Dockerfile
+    container_name: mariadb-container
+    restart: always
+    networks:
+      - mariadb-wordpress
+
+networks:
+  mariadb-wordpress:
+    driver: bridge
