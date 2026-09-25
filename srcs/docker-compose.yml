@@ -7,7 +7,16 @@ services:
     restart: always
     networks:
       - mariadb-wordpress
+    volumes:
+      - db_data:/var/lib/mysql
 
 networks:
   mariadb-wordpress:
     driver: bridge
+
+volumes:
+  db_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ralba-ji/data/mariadb

@@ -29,6 +29,7 @@ COPY ./tools/init.sh /usr/local/bin/init.sh
 #RUN: give permissions to execute
 RUN chmod +x /usr/local/bin/init.sh
 
-#EXPOSE 3306
+#In reality this doesnt do anything. Documentation.
+EXPOSE 3306/tcp
 
 ENTRYPOINT ["init.sh"]
