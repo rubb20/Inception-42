@@ -6,7 +6,7 @@ if [ ! -d /var/lib/mysql/mysql ]; then
 
 	echo "Done."
 	echo "Starting temporary MariaDB server for setup purposes."
-	mariadbd --user=mysql &
+	mariadbd --user=mysql --skip-networking &
 	temporary_pid="$!"
 
 	echo "Waiting for the server to be ready."
@@ -14,17 +14,19 @@ if [ ! -d /var/lib/mysql/mysql ]; then
 		sleep 1
 	done
 	echo "MariaDB is ready."
-	
-	mariadb -u root << 'EOF_SQL'
-ALTER USER 'root'@'localhost' IDENTIFIED BY 'root';
+
+	DB_PASSWORD="$(cat "$MARIADB_PASSWORD_FILE")"
+	DB_ROOT_PASSWORD="$(cat "$MARIADB_ROOT_PASSWORD_FILE")"
+	mariadb -u root << EOF_SQL
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
 CREATE DATABASE wordpress;
-CREATE USER 'ruben'@'%' IDENTIFIED BY 'ruben';
+CREATE USER 'ruben'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON wordpress.* TO 'ruben'@'%';
 FLUSH PRIVILEGES;
 EOF_SQL
 
 	echo "Setup is done. Shutting down temporary server..."
-	mariadb-admin --password=root shutdown
+	mariadb-admin --password="$DB_ROOT_PASSWORD" shutdown
 	wait "$temporary_pid" || true
 else
 	echo "MariaDB was already installed"
@@ -32,4 +34,3 @@ fi
 
 echo "Starting MariaDB..."
 exec mariadbd --user=mysql
-
