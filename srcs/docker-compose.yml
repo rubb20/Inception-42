@@ -3,15 +3,85 @@ services:
     build:
       context: ./requirements/mariadb
       dockerfile: Dockerfile
-    container_name: mariadb-container
+    container_name: mariadb
     restart: always
     networks:
       - mariadb-wordpress
     volumes:
       - db_data:/var/lib/mysql
+    environment:
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_DATABASE:  ${MARIADB_DATABASE}
+      MARIADB_PASSWORD_FILE: /run/secrets/db_password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+    secrets:
+      - db_password
+      - db_root_password
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$$(cat $${MARIADB_ROOT_PASSWORD_FILE})"]
+      start_period: 20s
+      interval: 1s
+      timeout: 5s
+      retries: 3
+
+  wordpress:
+    build:
+      context: ./requirements/wordpress
+      dockerfile: Dockerfile
+    container_name: wordpress
+    restart: always
+    networks:
+      - mariadb-wordpress
+      - wordpress-nginx
+    volumes:
+      - wordpress_data:/var/www/html
+    depends_on:
+      mariadb:
+        condition:  service_healthy
+        restart: true
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      WORDPRESS_DATABASE: ${MARIADB_DATABASE}
+      WORDPRESS_DB_USER: ${MARIADB_USER}
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+      WORDPRESS_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
+      WORDPRESS_USER: ${WORDPRESS_USER}
+      WORDPRESS_USER_PASSWORD_FILE: /run/secrets/wp_password
+    secrets:
+      - db_password
+      - wp_admin_password
+      - wp_password
+    healthcheck:
+      test: ["CMD-SHELL", "wp core is-installed --path=/var/www/html"]
+      start_period: 30s
+      interval: 1s
+      timeout: 5s
+      retries: 3
+
+  nginx:
+    build:
+      context: ./requirements/nginx
+      dockerfile: Dockerfile
+    container_name: nginx
+    restart: always
+    ports:
+     - 443:443
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - wordpress-nginx
+    depends_on:
+      wordpress:
+        condition: service_healthy
+        restart: true
+    secrets:
+      - nginx_crt
+      - nginx_key
 
 networks:
   mariadb-wordpress:
+    driver: bridge
+  wordpress-nginx:
     driver: bridge
 
 volumes:
@@ -20,3 +90,23 @@ volumes:
       type: none
       o: bind
       device: /home/ralba-ji/data/mariadb
+  wordpress_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ralba-ji/data/wordpress
+
+secrets:
+  db_password:
+    file: ../secrets/db_password.txt
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+  wp_admin_password:
+    file: ../secrets/wp_admin_password.txt
+  wp_password:
+    file: ../secrets/wp_password.txt
+  nginx_crt:
+    file: ../secrets/nginx.crt
+  nginx_key:
+    file: ../secrets/nginx.key
+
