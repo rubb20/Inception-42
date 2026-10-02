@@ -17,7 +17,6 @@ COPY ./conf/mariadb-server.cnf /etc/my.cnf.d/mariadb-server.cnf
 
 #RUN: create directories required by mariadb to work
 #and give ownership to mysql user and group
-RUN echo "--- CREATING MYSQL DIRECTORIES ---"
 RUN	mkdir -p /var/lib/mysql /run/mysqld/ && \ 
 	chown -R mysql:mysql /var/lib/mysql /run/mysqld
 	

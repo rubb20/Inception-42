@@ -20,8 +20,8 @@ services:
       - db_password
       - db_root_password
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$$(cat $${MARIADB_ROOT_PASSWORD_FILE})"]
-      start_period: 20s
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 --port=$${MARIADB_PORT} -u root -p$$(cat $${MARIADB_ROOT_PASSWORD_FILE})"]
+      start_period: 60s
       interval: 1s
       timeout: 5s
       retries: 3
@@ -37,11 +37,15 @@ services:
     networks:
       - mariadb-wordpress
       - wordpress-nginx
+      - wordpress-redis
     volumes:
       - wordpress_data:/var/www/html
     depends_on:
       mariadb:
-        condition:  service_healthy
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
         restart: true
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME}
@@ -83,11 +87,54 @@ services:
     secrets:
       - nginx_crt
       - nginx_key
+  
+  redis:
+    build:
+      context: ./requirements/bonus/redis
+      dockerfile: Dockerfile
+    image: redis
+    pull_policy: never
+    container_name: redis
+    restart: always
+    networks:
+      - wordpress-redis
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      start_period: 10s
+      interval: 1s
+      timeout: 3s
+      retries: 3
+
+  ftp:
+    build:
+      context: ./requirements/bonus/ftp
+      dockerfile: Dockerfile
+    image: ftp
+    pull_policy: never
+    container_name: ftp
+    restart: always
+    ports:
+      - 20:20
+      - 21:21
+      - 5000-5010:5000-5010
+    volumes:
+      - wordpress_data:/var/www/html
+    depends_on:
+      wordpress:
+        condition: service_healthy
+        restart: true
+    environment:
+      FTP_USER: ${FTP_USER}
+      FTP_PASSWORD_FILE: /run/secrets/ftp_password
+    secrets:
+      - ftp_password
 
 networks:
   mariadb-wordpress:
     driver: bridge
   wordpress-nginx:
+    driver: bridge
+  wordpress-redis:
     driver: bridge
 
 volumes:
@@ -95,12 +142,12 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/ralba-ji/data/mariadb
+      device: /home/$USER/data/mariadb
   wordpress_data:
     driver_opts:
       type: none
       o: bind
-      device: /home/ralba-ji/data/wordpress
+      device: /home/$USER/data/wordpress
 
 secrets:
   db_password:
@@ -115,3 +162,5 @@ secrets:
     file: ../secrets/nginx.crt
   nginx_key:
     file: ../secrets/nginx.key
+  ftp_password:
+    file: ../secrets/ftp_password.txt

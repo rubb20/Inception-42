@@ -2,7 +2,7 @@
 FROM alpine:3.23
 
 RUN	apk update && \
-	apk add --no-cache wget php83 php83-fpm php83-mysqli php83-phar php83-iconv && \
+	apk add --no-cache wget php83 php83-fpm php83-mysqli php83-phar php83-iconv php83-tokenizer php83-redis php83-ctype && \
 	rm -rf /var/cache/apk/*
 
 RUN	echo "memory_limit=512M" > /etc/php83/conf.d/99-memory.ini

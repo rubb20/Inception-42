@@ -1,5 +1,6 @@
 #!/bin/sh
 
+
 if [ ! -d /var/lib/mysql/mysql ]; then
 	echo "Initializing MariaDB."
 	mariadb-install-db --user=mysql --datadir=/var/lib/mysql > /dev/null
