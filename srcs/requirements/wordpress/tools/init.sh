@@ -15,7 +15,7 @@ if [ ! -f  "wp-config.php" ]; then
 		--dbname="${WORDPRESS_DATABASE}" \
 		--dbuser="${WORDPRESS_DB_USER}" \
 		--dbpass="${MARIADB_DB_PASSWORD}" \
-		--dbhost="mariadb" \
+		--dbhost="mariadb:3306" \
 		--allow-root
 
 	wp core install \
